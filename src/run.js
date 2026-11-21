@@ -35,9 +35,14 @@ export async function runSearch(actor, logger, options) {
 
     let pushed = 0;
     for await (const { records, total } of pages) {
-        if (records.length > 0) await actor.pushData(records);
-        pushed += records.length;
+        const result = records.length ? await actor.pushData(records) : undefined;
+        const chargeLimitReached = result?.eventChargeLimitReached === true;
+        pushed += chargeLimitReached ? result.chargedCount : records.length;
         logger.info(`Fetched ${pushed} / ${Math.min(total, maxResults)}`);
+        if (chargeLimitReached) {
+            logger.warning('Pay-per-event charge limit reached. Stopping dataset output.');
+            return;
+        }
     }
     if (pushed === 0) logger.warning('No records matched the search conditions.');
 }
@@ -50,6 +55,13 @@ async function runMonitoringSearch(actor, logger, pages, { mode, maxResults, sta
     const pending = new Set(state?.pending ?? []);
     const idField = mode === 'speech' ? 'speechId' : 'issueId';
     let pushed = 0;
+    let resumeFromId = state?.resumeFromId;
+    let passedResumeId = false;
+    let chargeLimitReached = false;
+    const saveState = () => store.setValue(key, {
+        seen: [...seen].slice(-MAX_SEEN_IDS), pending: [...pending],
+        ...(resumeFromId ? { resumeFromId } : {}),
+    });
 
     for await (const { records } of pages) {
         let changed = false;
@@ -57,29 +69,42 @@ async function runMonitoringSearch(actor, logger, pages, { mode, maxResults, sta
             for (const record of records) {
                 const id = record[idField];
                 if (typeof id !== 'string' || !id) throw new Error(`Kokkai API returned a record without a valid ${idField}.`);
+                if (id === resumeFromId) {
+                    passedResumeId = true;
+                    changed = true;
+                }
                 if (seen.has(id)) continue;
 
                 pending.add(id);
                 changed = true;
                 const result = await actor.pushData(record);
-                if (result?.eventChargeLimitReached && result.chargedCount === 0) {
-                    throw new Error('The dataset push was skipped because the event charge limit was reached.');
+                chargeLimitReached = result?.eventChargeLimitReached === true;
+                if (!chargeLimitReached || result.chargedCount > 0) {
+                    seen.add(id);
+                    pending.delete(id);
+                    pushed++;
                 }
-                seen.add(id);
-                pending.delete(id);
-                pushed += 1;
-                if (pushed === maxResults) break;
+                if ((chargeLimitReached || (resumeFromId && pushed === maxResults)) && (!resumeFromId || passedResumeId)) {
+                    resumeFromId = id;
+                }
+                if (chargeLimitReached) logger.warning('Pay-per-event charge limit reached. Stopping dataset output.');
+                if (chargeLimitReached || pushed === maxResults) break;
             }
         } finally {
             if (changed) {
-                await store.setValue(key, { seen: [...seen].slice(-MAX_SEEN_IDS), pending: [...pending] });
+                await saveState();
             }
         }
 
-        // A pending push may sit beyond an already-seen page after newer records arrive.
-        if (pushed === maxResults || (!changed && records.length > 0 && pending.size === 0)) break;
+        // A pending push or the previous charge cutoff can sit beyond an already-seen page.
+        if (chargeLimitReached || pushed === maxResults) break;
+        if ((!resumeFromId || passedResumeId) && !changed && records.length > 0 && pending.size === 0) break;
+    }
+    if (resumeFromId && !chargeLimitReached && pushed < maxResults) {
+        resumeFromId = undefined;
+        await saveState();
     }
 
-    if (pushed === 0) logger.info('No new records matched the search conditions.');
+    if (pushed === 0 && !chargeLimitReached) logger.info('No new records matched the search conditions.');
     else logger.info(`Pushed ${pushed} new records.`);
 }

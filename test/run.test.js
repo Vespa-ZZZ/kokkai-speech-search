@@ -4,7 +4,7 @@ import { runSearch, sanitizeErrorMessage } from '../src/run.js';
 
 const logger = { info() {}, warning() {} };
 
-function mockRun(t, input, pages, { state = new Map(), pushData = async () => {} } = {}) {
+function mockRun(t, input, pages, { state = new Map(), pushData = async () => {}, log = logger } = {}) {
     const actor = {
         getInput: async () => ({ any: '生成AI', ...input }),
         pushData: t.mock.fn(pushData),
@@ -22,7 +22,7 @@ function mockRun(t, input, pages, { state = new Map(), pushData = async () => {}
         return Response.json(pages[start]);
     });
     const wait = async () => {};
-    return { actor, fetchImpl, run: () => runSearch(actor, logger, { fetchImpl, wait }) };
+    return { actor, fetchImpl, run: () => runSearch(actor, log, { fetchImpl, wait }) };
 }
 
 test('onlyNew tracks individual speech IDs and emits zero records on an unchanged second run', async (t) => {
@@ -109,6 +109,47 @@ test('a partially successful page saves only the records pushed successfully', a
     });
     await assert.rejects(run.run(), /Push failed/);
     assert.deepEqual(state.get('state-default'), { seen: ['first'], pending: ['second'] });
+});
+
+test('charge limits stop normally whether the last write is saved or skipped', async (t) => {
+    const state = new Map();
+    const input = { mode: 'meeting', onlyNew: true };
+    const meetings = Array.from({ length: 10 }, (_, index) => ({ issueID: `meeting-${index + 1}` }));
+    const pages = {
+        1: { numberOfRecords: 12, meetingRecord: meetings, nextRecordPosition: 11 },
+        11: { numberOfRecords: 12, meetingRecord: [{ issueID: 'meeting-11' }, { issueID: 'meeting-12' }] },
+    };
+    const warning = t.mock.fn();
+    const log = { ...logger, warning };
+    const first = mockRun(t, input, pages, {
+        state, log,
+        pushData: async ({ issueId }) => ({ eventChargeLimitReached: issueId === 'meeting-10', chargedCount: 1 }),
+    });
+    await first.run();
+    assert.equal(first.actor.pushData.mock.callCount(), 10);
+    assert.equal(first.fetchImpl.mock.callCount(), 1);
+    assert.deepEqual(state.get('state-default').seen, meetings.map(({ issueID }) => issueID));
+    assert.deepEqual(state.get('state-default').pending, []);
+
+    const blocked = mockRun(t, input, pages, {
+        state, log, pushData: async () => ({ eventChargeLimitReached: true, chargedCount: 0 }),
+    });
+    await blocked.run();
+    assert.equal(blocked.actor.pushData.mock.callCount(), 1);
+    assert.deepEqual(state.get('state-default').pending, ['meeting-11']);
+    assert.equal(warning.mock.callCount(), 2);
+    assert.match(warning.mock.calls[0].arguments[0], /charge limit reached/i);
+
+    const retry = mockRun(t, { ...input, maxResults: 1 }, pages, { state });
+    await retry.run();
+    assert.deepEqual(retry.actor.pushData.mock.calls.map(({ arguments: [r] }) => r.issueId), ['meeting-11']);
+
+    const remaining = mockRun(t, input, pages, { state });
+    await remaining.run();
+    assert.deepEqual(remaining.actor.pushData.mock.calls.map(({ arguments: [r] }) => r.issueId), ['meeting-12']);
+    assert.deepEqual(state.get('state-default'), {
+        seen: [...meetings.map(({ issueID }) => issueID), 'meeting-11', 'meeting-12'], pending: [],
+    });
 });
 
 test('onlyNew retains the last 20,000 successfully pushed IDs per key', async (t) => {

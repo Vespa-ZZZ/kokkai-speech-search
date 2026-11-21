@@ -106,6 +106,8 @@ On the first run for a `stateKey`, the Actor writes up to `maxResults` of the ne
 
 `maxResults` caps new items per run. The `kokkai-speech-search-state` key-value store keeps up to 20,000 successfully saved IDs per key, using `speechId` for speeches and `issueId` for either meeting mode. A failed push can be retried on the next run if the search still returns the record.
 
+When the pay-per-event spending limit is reached, the run stops with a warning. The next monitoring run continues past the earlier cutoff and retries remaining records that still match the search.
+
 Reuse the same key for the same search and give each different search its own key. Run one task at a time per key.
 
 ## Request pacing and reuse
