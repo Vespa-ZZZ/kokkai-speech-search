@@ -1,11 +1,12 @@
 {
-  "actorSpecification": 1,
-  "name": "kokkai-speech-search",
-  "title": "Japan Diet Proceedings Search (Kokkai)",
-  "description": "Search public Japanese National Diet proceedings via the National Diet Library API.",
-  "version": "1.0",
-  "input": "./input_schema.json",
-  "storages": {
-    "dataset": "./dataset_schema.json"
-  }
+    "actorSpecification": 1,
+    "name": "kokkai-speech-search",
+    "title": "Japan Diet Proceedings Search (Kokkai)",
+    "description": "Search public Japanese National Diet proceedings via the National Diet Library API.",
+    "version": "1.0",
+    "input": "./input_schema.json",
+    "storages": {
+        "dataset": "./dataset_schema.json"
+    },
+    "output": "./output_schema.json"
 }
