@@ -1,0 +1,30 @@
+{
+  "numberOfRecords": 1,
+  "numberOfReturn": 1,
+  "startRecord": 1,
+  "nextRecordPosition": null,
+  "speechRecord": [
+    {
+      "speechID": "121705261X00120250124_001",
+      "issueID": "121705261X00120250124",
+      "imageKind": "会議録",
+      "searchObject": "本文",
+      "session": "217",
+      "nameOfHouse": "衆議院",
+      "nameOfMeeting": "本会議",
+      "issue": "第1号",
+      "date": "2025-01-24",
+      "closing": false,
+      "speechOrder": "1",
+      "speaker": "発言者名",
+      "speakerYomi": null,
+      "speakerGroup": null,
+      "speakerPosition": null,
+      "speakerRole": null,
+      "speech": "生成AIの利用について議論します。",
+      "startPage": 1,
+      "speechURL": "https://kokkai.ndl.go.jp/txt/121705261X00120250124/1",
+      "meetingURL": "https://kokkai.ndl.go.jp/txt/121705261X00120250124"
+    }
+  ]
+}

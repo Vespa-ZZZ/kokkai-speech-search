@@ -1,0 +1,138 @@
+{
+  "title": "Japan Diet Proceedings Search (Kokkai)",
+  "description": "Enter at least one search condition, such as keywords, a meeting name, a speaker, or a meeting date.",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "mode": {
+      "title": "Result type",
+      "description": "Speech returns individual matching speeches with text. Meeting list returns matching meetings with links to matching speeches when available. Full meeting returns matching meetings with the text of all speeches in each meeting.",
+      "type": "string",
+      "editor": "select",
+      "enum": ["speech", "meeting_list", "meeting"],
+      "enumTitles": ["Speech", "Meeting list", "Full meeting"],
+      "default": "speech"
+    },
+    "any": {
+      "title": "Keywords",
+      "description": "Search for words in the proceedings. Separate words with spaces to require all words (AND). For example, 生成AI means generative AI.",
+      "type": "string",
+      "editor": "textfield",
+      "prefill": "生成AI",
+      "example": "生成AI"
+    },
+    "speaker": {
+      "title": "Speaker name",
+      "description": "Search for a speaker by name. Separate terms with spaces to match any of them (OR).",
+      "type": "string",
+      "editor": "textfield"
+    },
+    "nameOfHouse": {
+      "title": "House",
+      "description": "Limit the search to the House of Representatives, House of Councillors, or joint proceedings.",
+      "type": "string",
+      "editor": "select",
+      "enum": ["", "衆議院", "参議院", "両院"],
+      "enumTitles": ["Any house", "House of Representatives", "House of Councillors", "Joint proceedings"]
+    },
+    "nameOfMeeting": {
+      "title": "Meeting name",
+      "description": "Search by plenary or committee name. Separate terms with spaces to match any of them (OR).",
+      "type": "string",
+      "editor": "textfield",
+      "example": "予算委員会"
+    },
+    "speakerGroup": {
+      "title": "Speaker's parliamentary group",
+      "description": "Search for part of the official name of the speaker's parliamentary group.",
+      "type": "string",
+      "editor": "textfield"
+    },
+    "speakerPosition": {
+      "title": "Speaker's position",
+      "description": "Search for part of the speaker's title or position as recorded in the proceedings.",
+      "type": "string",
+      "editor": "textfield"
+    },
+    "speakerRole": {
+      "title": "Speaker's role",
+      "description": "Limit the search to witnesses, invited experts, or public hearing speakers.",
+      "type": "string",
+      "editor": "select",
+      "enum": ["", "証人", "参考人", "公述人"],
+      "enumTitles": ["Any role", "Witness", "Invited expert", "Public hearing speaker"]
+    },
+    "from": {
+      "title": "Meeting date from",
+      "description": "Include meetings on or after this date (YYYY-MM-DD).",
+      "type": "string",
+      "editor": "datepicker",
+      "dateType": "absolute",
+      "prefill": "2026-01-01",
+      "example": "2025-01-01"
+    },
+    "until": {
+      "title": "Meeting date until",
+      "description": "Include meetings on or before this date (YYYY-MM-DD).",
+      "type": "string",
+      "editor": "datepicker",
+      "dateType": "absolute",
+      "example": "2025-12-31"
+    },
+    "sessionFrom": {
+      "title": "First Diet session",
+      "description": "Start of the inclusive session range. If only one bound is set, search only that session.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 999,
+      "example": 217
+    },
+    "sessionTo": {
+      "title": "Last Diet session",
+      "description": "End of the inclusive session range. If only one bound is set, search only that session.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 999,
+      "example": 219
+    },
+    "searchRange": {
+      "title": "Keyword search section",
+      "description": "Search the opening, main proceedings, or both. Applies when keywords are provided. The API searches both sections by default.",
+      "type": "string",
+      "editor": "select",
+      "enum": ["冒頭", "本文", "冒頭・本文"],
+      "enumTitles": ["Opening", "Main proceedings", "Opening and main proceedings"]
+    },
+    "maxResults": {
+      "title": "Maximum results",
+      "description": "Maximum number of speeches or meetings to write to the dataset.",
+      "type": "integer",
+      "default": 100,
+      "minimum": 1,
+      "maximum": 10000,
+      "example": 5
+    },
+    "requestIntervalSecs": {
+      "title": "Seconds between requests",
+      "description": "Seconds to wait after an API response. Retries may wait longer.",
+      "type": "number",
+      "default": 3,
+      "minimum": 3,
+      "example": 3
+    },
+    "onlyNew": {
+      "title": "Only new results",
+      "description": "Remember successfully saved results and skip them on later runs.",
+      "type": "boolean",
+      "default": false
+    },
+    "stateKey": {
+      "title": "Monitoring state key",
+      "description": "Use a separate key for each monitored search. Use 1 to 50 letters, digits, hyphens, or underscores.",
+      "type": "string",
+      "editor": "textfield",
+      "pattern": "^[a-zA-Z0-9_-]{1,50}$",
+      "default": "default"
+    }
+  }
+}

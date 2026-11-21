@@ -1,0 +1,24 @@
+{
+  "actorSpecification": 1,
+  "title": "Kokkai proceedings",
+  "views": {
+    "overview": {
+      "title": "Speech overview",
+      "transformation": {
+        "fields": ["date", "nameOfHouse", "nameOfMeeting", "speaker", "speakerGroup", "speech", "speechURL"]
+      },
+      "display": {
+        "component": "table",
+        "properties": {
+          "date": { "label": "Date", "format": "date" },
+          "nameOfHouse": { "label": "House", "format": "text" },
+          "nameOfMeeting": { "label": "Meeting", "format": "text" },
+          "speaker": { "label": "Speaker", "format": "text" },
+          "speakerGroup": { "label": "Parliamentary group", "format": "text" },
+          "speech": { "label": "Speech", "format": "text" },
+          "speechURL": { "label": "Speech URL", "format": "link" }
+        }
+      }
+    }
+  }
+}

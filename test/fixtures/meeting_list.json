@@ -1,0 +1,27 @@
+{
+  "numberOfRecords": 1,
+  "numberOfReturn": 1,
+  "startRecord": 1,
+  "meetingRecord": [
+    {
+      "issueID": "121705261X00120250124",
+      "imageKind": "会議録",
+      "searchObject": "本文",
+      "session": "217",
+      "nameOfHouse": "衆議院",
+      "nameOfMeeting": "本会議",
+      "issue": "第1号",
+      "date": "2025-01-24",
+      "closing": false,
+      "speechRecord": [
+        {
+          "speechID": "121705261X00120250124_001",
+          "speechOrder": "1",
+          "speaker": "発言者名",
+          "speechURL": "https://kokkai.ndl.go.jp/txt/121705261X00120250124/1"
+        }
+      ],
+      "meetingURL": "https://kokkai.ndl.go.jp/txt/121705261X00120250124"
+    }
+  ]
+}
