@@ -122,7 +122,7 @@
     },
     "onlyNew": {
       "title": "Only new results",
-      "description": "Remember successfully saved results and skip them on later runs.",
+      "description": "The first run saves up to maxResults of the newest matches and marks them as seen. Later runs skip seen items and can stop at an all-seen page, skipping older matches beyond it. Older matches left on a partially processed page may still appear later. To collect historical matches, first run with onlyNew set to false.",
       "type": "boolean",
       "default": false
     },

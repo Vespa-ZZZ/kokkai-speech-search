@@ -10,6 +10,31 @@ Search public Japanese National Diet proceedings through the National Diet Libra
 
 The `meeting` mode returns up to 10 meetings per request. With `maxResults: 1000` and that many matches, expect about 100 requests and five minutes or more at the default request interval.
 
+## Output fields in speech mode
+
+Each item in `speech` mode has the following fields. Missing values are written as `null`.
+
+| Field | Description |
+| --- | --- |
+| `speechId` | NDL speech identifier. |
+| `issueId` | NDL meeting record identifier. |
+| `session` | Number of the Diet session. |
+| `nameOfHouse` | House or joint body that held the meeting. |
+| `nameOfMeeting` | Name of the plenary, committee, or other meeting. |
+| `issue` | Issue number of the meeting record, such as `第1号`. |
+| `date` | Meeting date in `YYYY-MM-DD` format. |
+| `speechOrder` | Numeric position of the speech in the meeting record. |
+| `speaker` | Speaker name as recorded in the proceedings. |
+| `speakerYomi` | Japanese reading of the speaker name. |
+| `speakerGroup` | Speaker's parliamentary group as recorded in the proceedings. |
+| `speakerPosition` | Speaker's title or position as recorded in the proceedings. |
+| `speakerRole` | Role in the meeting, such as witness. |
+| `speech` | Speech text. |
+| `startPage` | Page on which the speech begins. |
+| `speechURL` | URL of the speech in the NDL proceedings. |
+| `meetingURL` | URL of the full meeting transcript. |
+| `pdfURL` | URL of the meeting record PDF, when available. |
+
 ## Input examples
 
 Include at least one search condition, such as `any`, `speaker`, `nameOfMeeting`, or `from`. Use spaces between keywords to require every term. Use spaces in `speaker` or `nameOfMeeting` to match any term. Dates use `YYYY-MM-DD`. With a single session bound, the API searches that session only. [NDL search parameters](https://kokkai.ndl.go.jp/api.html)
@@ -58,9 +83,10 @@ This abbreviated speech item uses illustrative values. In the meeting modes, `sp
 
 ## Use cases
 
-- Monitor policy debates by tracking keywords and committees over time.
-- Find primary sources for media research and link readers to the proceedings.
-- Feed speeches and source links into retrieval-augmented generation (RAG) or AI agents.
+- Schedule daily monitoring for a bill name such as `子ども・子育て支援法` or a policy keyword such as `生成AI`. Review new matches and use `speechURL` to read each mention in context.
+- Follow a committee's proceedings over a session. For example, use `meeting_list` and `nameOfMeeting: "予算委員会"` to build a timeline of Budget Committee meetings, then open each `meetingURL` to read the full proceedings.
+- Verify a quotation for a news article by searching for its wording and meeting date, then link to the matching `speechURL`.
+- Build a retrieval-augmented generation (RAG) corpus. Export `speech` records for a defined topic and date range, and retain `date`, `nameOfMeeting`, and `speechURL` with each text chunk so answers can cite the original proceedings.
 
 ### Policy monitoring with a daily keyword search
 
@@ -76,9 +102,11 @@ Create an Actor task with this input and schedule it to run daily. This example 
 }
 ```
 
-The first run can output existing matches. Later runs skip results already saved under the same key. `maxResults` caps the number of new items written per run. The `kokkai-speech-search-state` key-value store keeps up to 20,000 successfully saved IDs per key, using `speechId` for speeches and `issueId` for either meeting mode. A failed push can be retried on the next run if the search still returns the record.
+On the first run for a `stateKey`, the Actor writes up to `maxResults` of the newest matches and marks the successfully written items as seen. Later runs skip items already saved under that key and can stop at a page made up entirely of seen items, skipping all older matches beyond that page. If the first run reaches the cap partway through a page, older matches left on that page can still appear on later runs. To collect historical matches, run a regular search with `onlyNew: false` before enabling monitoring.
 
-Reuse the same key for the same search and give each different search its own key. Run one task at a time per key. Results arrive newest first, so the Actor can stop after a page of already saved records. Use a regular search for historical backfills.
+`maxResults` caps new items per run. The `kokkai-speech-search-state` key-value store keeps up to 20,000 successfully saved IDs per key, using `speechId` for speeches and `issueId` for either meeting mode. A failed push can be retried on the next run if the search still returns the record.
+
+Reuse the same key for the same search and give each different search its own key. Run one task at a time per key.
 
 ## Request pacing and reuse
 
@@ -104,4 +132,4 @@ The local default dataset is stored in `storage/datasets/default/`.
 
 ### 政策モニタリング: キーワードで毎日スケジュール実行
 
-上の政策モニタリング例を Actor タスクの入力に設定し、毎日実行するようスケジュールします。`onlyNew: true` で「生成AI」を含む発言を検索し、同じ `stateKey` で出力済みの発言を除きます。キーワードやモードの異なるタスクには別のキーを指定します。
+上の政策モニタリング例を Actor タスクの入力に設定し、毎日実行するようスケジュールします。`onlyNew: true` の初回は、新しい順に最大 `maxResults` 件を出力し、出力に成功した分を既読にします。次回以降は同じ `stateKey` の既読分を除き、全件が既読のページに達して打ち切ると、それより古い一致は取得しません。初回にページの途中で上限に達した場合、そのページに残った古い一致が次回以降に出力されることがあります。過去分も必要なら、監視を始める前に通常モード（`onlyNew: false`）で取得してください。キーワードやモードの異なるタスクには別のキーを指定します。
