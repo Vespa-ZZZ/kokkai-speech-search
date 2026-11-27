@@ -1,3 +1,4 @@
+import { pushDataWithinLimit } from './charging.js';
 import { searchPages } from './kokkai.js';
 
 const STATE_STORE = 'kokkai-speech-search-state';
@@ -35,12 +36,13 @@ export async function runSearch(actor, logger, options) {
 
     let pushed = 0;
     for await (const { records, total } of pages) {
-        const result = records.length ? await actor.pushData(records) : undefined;
+        const result = records.length ? await pushDataWithinLimit(actor, records) : undefined;
         const chargeLimitReached = result?.eventChargeLimitReached === true;
         pushed += chargeLimitReached ? result.chargedCount : records.length;
         logger.info(`Fetched ${pushed} / ${Math.min(total, maxResults)}`);
         if (chargeLimitReached) {
             logger.warning('Pay-per-event charge limit reached. Stopping dataset output.');
+            await actor.setValue?.('RUN_SUMMARY', { pushed, stopReason: 'spendingLimit' });
             return;
         }
     }
@@ -77,7 +79,7 @@ async function runMonitoringSearch(actor, logger, pages, { mode, maxResults, sta
 
                 pending.add(id);
                 changed = true;
-                const result = await actor.pushData(record);
+                const result = await pushDataWithinLimit(actor, record);
                 chargeLimitReached = result?.eventChargeLimitReached === true;
                 if (!chargeLimitReached || result.chargedCount > 0) {
                     seen.add(id);
@@ -105,6 +107,7 @@ async function runMonitoringSearch(actor, logger, pages, { mode, maxResults, sta
         await saveState();
     }
 
+    if (chargeLimitReached) await actor.setValue?.('RUN_SUMMARY', { pushed, stopReason: 'spendingLimit' });
     if (pushed === 0 && !chargeLimitReached) logger.info('No new records matched the search conditions.');
     else logger.info(`Pushed ${pushed} new records.`);
 }

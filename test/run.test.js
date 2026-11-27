@@ -183,3 +183,38 @@ test('error messages redact absolute paths and preserve HTTP URLs without append
         "Failed to open '<path>', <path>, <path>, or <path>. See https://example.invalid/reference.");
     assert.equal(sanitizeErrorMessage(new Error('ENOENT:/tmp/run.json', { cause: error })), 'ENOENT:<path>');
 });
+
+test('prechecks the dataset item budget and allows non-PPE output', async (t) => {
+    const pages = {
+        1: {
+            numberOfRecords: 3,
+            speechRecord: ['first', 'second', 'third'].map((speechID) => ({ speechID, issueID: 'issue-1' })),
+        },
+    };
+    for (const [isPayPerEvent, budget] of [[true, 1], [true, 0], [false, 0]]) {
+        const configureActor = (actor, records) => {
+            actor.getChargingManager = () => ({
+                getPricingInfo: () => ({ isPayPerEvent }),
+                calculateMaxEventChargeCountWithinLimit(event) {
+                    assert.equal(event, 'apify-default-dataset-item');
+                    return budget - records.length;
+                },
+            });
+        };
+        for (const onlyNew of [false, true]) {
+            const state = new Map();
+            const rows = [];
+            let summary;
+            const { actor, run } = mockRun(t, { onlyNew }, pages, {
+                state, pushData: async (data) => rows.push(...[].concat(data)),
+            });
+            actor.setValue = async (_, value) => { summary = value; };
+            configureActor(actor, rows);
+            await run();
+            const expected = isPayPerEvent ? budget : 3;
+            assert.equal(rows.length, expected);
+            assert.equal(summary?.stopReason, isPayPerEvent ? 'spendingLimit' : undefined);
+            if (onlyNew) assert.deepEqual(state.get('state-default').seen, rows.map(({ speechId }) => speechId));
+        }
+    }
+});
